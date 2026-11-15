@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>云上实验收尾检查清单</title>
+  <style>
+    :root {
+      --bg: #f4f7f5;
+      --card: #ffffff;
+      --ink: #1d2b24;
+      --muted: #5b6b64;
+      --line: #d7e2dc;
+      --ok: #1f8a56;
+      --ok-bg: #e8f6ee;
+      --accent: #0f6b4c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+    h1 { font-size: 1.6rem; margin: 0 0 8px; }
+    .lead { color: var(--muted); margin: 0 0 24px; }
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    #progress { font-weight: 600; color: var(--accent); }
+    button {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      color: var(--ink);
+    }
+    button:hover { border-color: var(--accent); color: var(--accent); }
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-bottom: 16px;
+    }
+    h2 { font-size: 1.05rem; margin: 0 0 10px; }
+    label {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 8px 0;
+      border-top: 1px solid var(--line);
+    }
+    label:first-of-type { border-top: 0; }
+    label.done { background: var(--ok-bg); margin: 0 -18px; padding: 8px 18px; }
+    label.done span { color: var(--ok); }
+    input[type="checkbox"] { margin-top: 5px; }
+    footer { color: var(--muted); font-size: 0.85rem; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>云上实验收尾检查清单</h1>
+    <p class="lead">做完实验后按这项勾选，避免按需资源忘记释放。勾选状态只保存在本机浏览器里，不会上传。</p>
+    <div class="toolbar">
+      <div id="progress">已完成 0 / 0</div>
+      <button type="button" id="reset">清空勾选</button>
+    </div>
+    <div id="lists"></div>
+    <footer>这是一个本地静态页面，可直接用浏览器打开。适合作为实验结束后的收尾提醒，不替代费用中心的对账。</footer>
+  </main>
+  <script>
+    const GROUPS = [
+      {
+        title: "先分清资源类型",
+        items: [
+          "确认本次用的是免费体验名额，还是按需开通的资源",
+          "如果是按需资源，已经记下计费项，并预留释放时间"
+        ]
+      },
+      {
+        title: "计算与数据库",
+        items: [
+          "云服务器已关机或已删除",
+          "数据库、缓存、消息队列等中间件已释放",
+          "不再需要的自动备份策略已关闭"
+        ]
+      },
+      {
+        title: "网络与地址",
+        items: [
+          "弹性公网 IP 已解绑并释放",
+          "共享带宽、负载均衡、NAT 网关已检查",
+          "安全组或防火墙临时规则已收回"
+        ]
+      },
+      {
+        title: "存储与费用",
+        items: [
+          "云硬盘、快照、镜像和临时对象存储已清理",
+          "已在费用中心核对当前按需资源与近几小时消费"
+        ]
+      }
+    ];
+    const KEY = "lab-checkout-v1";
+    const lists = document.getElementById("lists");
+    const progress = document.getElementById("progress");
+    const saved = JSON.parse(localStorage.getItem(KEY) || "{}");
+
+    function render() {
+      lists.innerHTML = "";
+      let total = 0;
+      let done = 0;
+      GROUPS.forEach((group, gi) => {
+        const section = document.createElement("section");
+        const h2 = document.createElement("h2");
+        h2.textContent = group.title;
+        section.appendChild(h2);
+        group.items.forEach((text, ii) => {
+          const id = gi + "-" + ii;
+          total += 1;
+          const label = document.createElement("label");
+          const box = document.createElement("input");
+          box.type = "checkbox";
+          box.checked = !!saved[id];
+          if (box.checked) {
+            done += 1;
+            label.classList.add("done");
+          }
+          box.addEventListener("change", () => {
+            saved[id] = box.checked;
+            localStorage.setItem(KEY, JSON.stringify(saved));
+            render();
+          });
+          const span = document.createElement("span");
+          span.textContent = text;
+          label.appendChild(box);
+          label.appendChild(span);
+          section.appendChild(label);
+        });
+        lists.appendChild(section);
+      });
+      progress.textContent = "已完成 " + done + " / " + total;
+    }
+
+    document.getElementById("reset").addEventListener("click", () => {
+      Object.keys(saved).forEach((k) => delete saved[k]);
+      localStorage.removeItem(KEY);
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
